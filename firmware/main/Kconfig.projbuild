@@ -1,0 +1,9 @@
+menu "Posiflex clock"
+    config POSIFLEX_WIFI_SSID
+        string "Wi-Fi SSID"
+        default ""
+
+    config POSIFLEX_WIFI_PASSWORD
+        string "Wi-Fi password"
+        default ""
+endmenu
