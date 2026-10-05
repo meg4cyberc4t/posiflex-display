@@ -18,10 +18,20 @@ typedef struct {
     void (*pause_ms)(void *context, uint32_t milliseconds);
 } posiflex_output_t;
 
-// next_code is the first unused custom character code after this frame.
-bool posiflex_render_full(const posiflex_output_t *output, const struct tm *local,
-                          bool colon_on, posiflex_network_status_t status,
-                          uint16_t *next_code);
-bool posiflex_render_colon(const posiflex_output_t *output, const struct tm *local,
-                           bool colon_on, uint16_t *next_code);
+#define POSIFLEX_GLYPH_CAPACITY 96
+
+typedef struct {
+    uint8_t pixels[5];
+} posiflex_glyph_t;
+
+typedef struct {
+    bool initialized;
+    uint8_t glyph_count;
+    posiflex_glyph_t glyphs[POSIFLEX_GLYPH_CAPACITY];
+    uint8_t displayed[2][20];
+} posiflex_renderer_t;
+
+bool posiflex_render_frame(posiflex_renderer_t *renderer,
+                           const posiflex_output_t *output, const struct tm *local,
+                           bool colon_on, posiflex_network_status_t status);
 bool posiflex_render_waiting_for_time(const posiflex_output_t *output);

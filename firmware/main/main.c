@@ -36,6 +36,7 @@ void app_main(void)
             .send = usb_display_send,
             .pause_ms = usb_display_pause,
         };
+        posiflex_renderer_t renderer = {0};
         bool have_frame = false;
         bool waiting_message_shown = false;
         int last_hour = -1;
@@ -43,7 +44,6 @@ void app_main(void)
         int last_day = -1;
         int last_second = -1;
         posiflex_network_status_t last_status = POSIFLEX_CHECKING;
-        uint16_t next_code = 0xa0;
 
         while (usb_display_connected(&display)) {
             struct tm local;
@@ -58,26 +58,23 @@ void app_main(void)
 
             const posiflex_network_status_t status = network_status();
             const bool colon_on = (local.tm_sec % 2) == 0;
-            const bool full = !have_frame || local.tm_hour != last_hour ||
-                              local.tm_min != last_minute ||
-                              local.tm_yday != last_day || status != last_status ||
-                              (colon_on && next_code > 0xfc);
-            bool sent = true;
-            if (full) {
-                sent = posiflex_render_full(&output, &local, colon_on, status, &next_code);
-                have_frame = sent;
+            const bool changed = !have_frame || local.tm_hour != last_hour ||
+                                 local.tm_min != last_minute ||
+                                 local.tm_yday != last_day || status != last_status;
+            if (changed || local.tm_sec != last_second) {
+                if (!posiflex_render_frame(&renderer, &output, &local, colon_on,
+                                           status)) break;
+                have_frame = true;
+            }
+            if (changed) {
                 last_hour = local.tm_hour;
                 last_minute = local.tm_min;
                 last_day = local.tm_yday;
                 last_status = status;
-                last_second = local.tm_sec;
                 ESP_LOGI(TAG, "%02d:%02d frame, network=%d", local.tm_hour,
                          local.tm_min, status);
-            } else if (local.tm_sec != last_second) {
-                sent = posiflex_render_colon(&output, &local, colon_on, &next_code);
-                last_second = local.tm_sec;
             }
-            if (!sent) break;
+            last_second = local.tm_sec;
             vTaskDelay(pdMS_TO_TICKS(100));
         }
         usb_display_close(&display);
